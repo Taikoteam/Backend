@@ -1,4 +1,5 @@
 const OracleBot = require('@oracle/bots-node-sdk');
+const { response } = require('express');
 const { WebhookClient, WebhookEvent } = OracleBot.Middleware;
 
 module.exports = (app) => {
@@ -28,7 +29,24 @@ module.exports = (app) => {
   // Create endpoint for bot webhook channel configurtion (Outgoing URI)
   // NOTE: webhook.receiver also supports using a callback as a replacement for WebhookEvent.MESSAGE_RECEIVED.
   //  - Useful in cases where custom validations, etc need to be performed.
-  app.post('/bot/message', webhook.receiver());
+  /* app.post('/bot/message', webhook.receiver())
+  .then((result) => {
+    console.log(result);
+  })
+  .catch((error) => {
+    console.error(error);
+  }); */
+  app.post('/bot/message', (req, res) => {
+    // Aquí puedes manejar la solicitud POST
+    // Puedes acceder a los datos de la solicitud a través de req.body, req.params, req.query, etc.
+    // Por ejemplo, para acceder al cuerpo de la solicitud POST, puedes usar req.body
+    console.log("PRUEBA",req.body.messagePayload.text);
+    // Realiza algún procesamiento y envía una respuesta
+    const responseData = { message: 'Respuesta del servidor' };
+    res.json(responseData);
+  });
+  
+
 
   // Integrate with messaging client according to their specific SDKs, etc.
   app.post('/test/message', (req, res) => {

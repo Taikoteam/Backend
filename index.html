@@ -26,8 +26,9 @@
                     console.log(reason);
                 });
                 window[name] = Bots;
-            });
+            }, 0);
         }
     </script>
+    <script src="node_modules\@oracle\bots-node-sdk\bin\sdk.js" onload="initSDK('Bots')"></script>
 </body>
 </html>
