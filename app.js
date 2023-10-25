@@ -1,8 +1,7 @@
 const express = require('express');
 const service = require('./service');
 require('dotenv').config()
-import connection from './providers/server'
-
+const connection = require('./providers/server');
 const logger = console;
 const app = express();
 service(app);
