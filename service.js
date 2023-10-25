@@ -1,8 +1,9 @@
 const OracleBot = require('@oracle/bots-node-sdk');
 const { response } = require('express');
 const { WebhookClient, WebhookEvent } = OracleBot.Middleware;
+//const connection = require('./providers/server');
 
-module.exports = (app) => {
+module.exports = (app, connection) => {
   const logger = console;
   // initialize the application with OracleBot
   OracleBot.init(app, {
@@ -47,11 +48,24 @@ module.exports = (app) => {
   });
   
 
-
+console.log(new Date().getDate() + "/" + (new Date().getMonth() + 1) + "/" + new Date().getFullYear() );
+console.log(new Date().getHours() + ":" + new Date().getMinutes() + ":" + new Date().getSeconds() );
   // Integrate with messaging client according to their specific SDKs, etc.
   app.post('/test/message', (req, res) => {
     const { user, text } = req.body;
-    // construct message to bot from the client message format
+    
+    const sql = 'INSERT INTO Conversacion (idCliente, mensajeUsuario, fecha, hora) VALUES ( ?, ?, ?, ?)';
+    const values = [user, text, ( new Date().getFullYear() + "/" + (new Date().getMonth() + 1) + "/" + new Date().getDate() ), (new Date().getHours() + ":" + new Date().getMinutes() + ":" + new Date().getSeconds())];
+
+    connection.query(sql, values, (error, result) => {
+      if (error) {
+        console.error('Error al insertar datos en la base de datos: ' + error.message);
+        res.status(500).json({ error: 'Error al insertar datos en la base de datos' });
+      } else {
+        console.log('Datos insertados exitosamente');
+        res.status(200).json({ message: 'Datos insertados exitosamente' });
+      }
+    });
     const MessageModel = webhook.MessageModel();
     const message = {
       userId: user,

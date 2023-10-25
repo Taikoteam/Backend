@@ -4,7 +4,7 @@ require('dotenv').config()
 const connection = require('./providers/server');
 const logger = console;
 const app = express();
-service(app);
+service(app, connection);
 
 
 const server = app.listen(process.env.PORT || 3000, () => {
