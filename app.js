@@ -3,8 +3,15 @@ const service = require('./service');
 require('dotenv').config()
 const connection = require('./providers/server');
 const logger = console;
+const cors = require('cors');
 const app = express();
 service(app, connection);
+
+app.use(cors());
+
+const database = require('./routes')
+
+app.use('/database', database)
 
 
 const server = app.listen(process.env.PORT || 3000, () => {
