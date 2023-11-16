@@ -71,8 +71,4 @@ module.exports = (app, connection) => {
       }
     });
   }
-
-
-
-
 }

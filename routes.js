@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const connection = require('./providers/server');
+const openai = require('./openai');
 
 router.get('/productos', (req, res) => {
     const sql = 'SELECT Nombre, Precio_Lista, Marca FROM Producto LIMIT 30';
@@ -17,6 +18,10 @@ router.get('/productos', (req, res) => {
             }
         }
     });
+});
+
+router.get('/pruebaOpenAI', (req, res) => {
+  openai()
 });
 
 module.exports = router;
