@@ -12,7 +12,7 @@ async function openaiFunc() {
         'OpenAI-Beta': 'assistants=v1'
       }
     });
-    console.log("Asistente recuperado:", myAssistant);
+    console.log("Asistente recuperado");
   } catch (error) {
     console.error("Error al recuperar el asistente:", error);
   }

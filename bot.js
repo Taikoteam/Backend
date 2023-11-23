@@ -47,16 +47,18 @@ const addMessage = (threadId, content) => openai.beta.threads.messages.create(th
 async function getStatusOfOrder(orderNumber) {
     console.log(`Consultando el estatus del pedido: ${orderNumber}`);
     return new Promise((resolve, reject) => {
+        const clienteId = 1
+        console.log("Si estoy entrando a hacer el query")
         connection.query(
-            'SELECT Estatus FROM Detalles_Pedido WHERE Envio_Id = ?',
-            [orderNumber],
+            'SELECT P.Id AS Pedido_ID,DP.Estatus,P.Fecha,PR.Nombre AS Nombre_Producto,DP.Cantidades,E.Direccion AS Direccion_de_Envio FROM Pedido AS P JOIN Detalles_Pedido AS DP ON P.Id = DP.Pedido_Id JOIN Producto AS PR ON DP.Producto_Id = PR.Pk_Id JOIN Envio AS E ON DP.Envio_Id = E.Id WHERE P.Id = ? AND P.Cliente_Id = ?;',
+            [orderNumber, clienteId],
             (error, results, fields) => {
                 if (error) {
                     console.error('Error en la consulta a la base de datos:', error);
                     reject(error);
                 } else {
-                    console.log('Resultados de la consulta:', results);
-                    resolve(results.length > 0 ? results[0].estatus : null);
+                    console.log('Resultados de la consulta:', results[0]);
+                    resolve(results.length > 0 ? results[0] : null);
                 }
             }
         );
@@ -77,8 +79,7 @@ function extraerNumeroDePedido(mensaje) {
 client.on('messageCreate', async message => {
     if (message.author.bot || !message.content || message.content === '') return;
 
-    let messagesLoaded = false; // Inicializa messagesLoaded aquí
-
+    let messagesLoaded = false; // Inicializa messagesLoaded aqui
     const channelId = message.channel.id; // Identificador único del canal o usuario
     if (!userStates[channelId]) {
         userStates[channelId] = { awaitingOrderNumber: false };
@@ -96,9 +97,10 @@ client.on('messageCreate', async message => {
 
         try {
             const status = await getStatusOfOrder(orderNumber);
+            console.log(status)
             let reply;
             if (status) {
-                reply = `El estatus de tu pedido ${orderNumber} es: ${status}`;
+                reply = `El estatus de la orden ${orderNumber} de ${status.Cantidades} pz de ${status.Nombre_Producto}, enviado a ${status.Direccion_de_Envio} es: ${status.Estatus}`;
             } else {
                 reply = `Lo siento, no pude encontrar información sobre el pedido número ${orderNumber}.`;
             }
@@ -139,6 +141,7 @@ client.on('messageCreate', async message => {
     response = response.substring(0, 1999); // Discord msg length limit
 
     console.log(response);
+    console.log("Esto es message: ", message.content, "\nEsto es response: ", response)
     message.reply(response);
 });
 
