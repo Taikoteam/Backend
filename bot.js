@@ -65,8 +65,139 @@ async function getStatusOfOrder(orderNumber) {
     });
 }
 
+async function getDisponibilityProduct(nombre_producto){
+    console.log(`Consultando la disponibilidad del producto: ${nombre_producto}`);
+    return new Promise((resolve, reject) => {
+        console.log("Estoy haciendo un nuevo query")
+        connection.query('SELECT P.Pk_Id, P.Disponibilidad FROM Producto AS P WHERE P.Nombre = ?;',
+        [nombre_producto],
+        (error, results, fields) => {
+            if (error) {
+                console.error('Error en la consulta a la base de datos:', error);
+                reject(error);
+            } else {
+                console.log('Resultados de la consulta:', results[0]);
+                resolve(results.length > 0 ? results[0] : null);
+            }
+        }
+        )
+    })
+}
+
+async function RealizarPedido(){
+    const Cliente_Id = 1;
+    const Fecha = '2023-11-22';
+    console.log(`Realizando un nuevo pedido para el cliente`);
+    return new Promise((resolve, reject) => {
+        console.log("Estoy haciendo un nuevo query");
+
+        connection.query(
+        'INSERT INTO Pedido (Cliente_Id, Fecha) VALUES (?, ?);',
+        [Cliente_Id, Fecha],
+        (error, results, fields) => {
+            if (error) {
+                console.error('Error en la consulta a la base de datos:', error);
+                reject(error);
+            } else {
+                console.log('Pedido realizado con éxito. ID del pedido:', results.insertId);
+                resolve(results);
+        }
+      }
+    );
+  });
+}
+
+async function RealizarEnvio(Direccion){
+    const Id_Tipo_Envio = Math.floor(Math.random() * 3) + 1;
+    const Id_tipo_contenedor = Math.floor(Math.random() * 7) + 1;
+    const Fecha = '2023-11-23'
+    console.log(`Realizando un nuevo envio para el cliente`);
+    return new Promise((resolve, reject) => {
+        console.log("Estoy haciendo un nuevo query");
+
+        connection.query(
+        'INSERT INTO Envio (Id_Tipo_Envio, Id_tipo_contenedor, Direccion, Fecha_Envio) VALUES (?, ?, ?, ?);',
+        [Id_Tipo_Envio, Id_tipo_contenedor, Direccion, Fecha],
+        (error, results, fields) => {
+            if (error) {
+                console.error('Error en la consulta a la base de datos:', error);
+                reject(error);
+            } else {
+                console.log('Pedido realizado con éxito. ID del pedido:', results.insertId);
+                resolve(results);
+        }
+      }
+    );
+  });
+}
+
+async function ObtenerUltimoPedido() {
+    return new Promise((resolve, reject) => {
+      console.log("Estoy haciendo un nuevo query");
+  
+      connection.query(
+        'SELECT Id FROM Pedido ORDER BY Id DESC LIMIT 1;',
+        (error, results, fields) => {
+          if (error) {
+            console.error('Error en la consulta a la base de datos:', error);
+            reject(error);
+          } else {
+            console.log('Último pedido obtenido con éxito:', results[0]);
+            resolve(results.length > 0 ? results[0] : null);
+          }
+        }
+      );
+    });
+  }
+
+  async function ObtenerUltimoEnvio() {
+    return new Promise((resolve, reject) => {
+      console.log("Estoy haciendo un nuevo query");
+  
+      connection.query(
+        'SELECT Id FROM Envio ORDER BY Id DESC LIMIT 1;',
+        (error, results, fields) => {
+          if (error) {
+            console.error('Error en la consulta a la base de datos:', error);
+            reject(error);
+          } else {
+            console.log('Último pedido obtenido con éxito:', results[0]);
+            resolve(results.length > 0 ? results[0] : null);
+          }
+        }
+      );
+    });
+  }
+
+async function RealizarDetalles(Id, cantidad){
+    const Pedido_id = await ObtenerUltimoPedido()
+    const Envio_id = await ObtenerUltimoEnvio()
+    console.log(`Realizando un nuevo detallesPedido para el cliente`);
+    return new Promise((resolve, reject) => {
+        console.log("Estoy haciendo un nuevo query");
+
+        connection.query(
+        'INSERT INTO Detalles_Pedido (Producto_Id, Pedido_Id, Cantidades, Envio_Id) VALUES (?, ?, ?, ?);',
+        [Id, Pedido_id.Id, cantidad, Envio_id.Id],
+        (error, results, fields) => {
+            if (error) {
+                console.error('Error en la consulta a la base de datos:', error);
+                reject(error);
+            } else {
+                console.log('Pedido realizado con éxito. ID del pedido:', results.insertId);
+                resolve(results);
+        }
+      }
+    );
+  });
+}
+
 function esConsultaDePedido(mensaje) {
     return mensaje.toLowerCase().startsWith("estatus del pedido");
+}
+
+function esRealizarPedido(mensaje){
+    return mensaje.toLowerCase().startsWith("quiero obtener una orden nueva");
 }
 
 function extraerNumeroDePedido(mensaje) {
@@ -82,12 +213,19 @@ client.on('messageCreate', async message => {
     let messagesLoaded = false; // Inicializa messagesLoaded aqui
     const channelId = message.channel.id; // Identificador único del canal o usuario
     if (!userStates[channelId]) {
-        userStates[channelId] = { awaitingOrderNumber: false };
+        userStates[channelId] = { awaitingOrderNumber: false, awaitingDataPedido: false };
     }
-
-    if (esConsultaDePedido(message.content) && !userStates[channelId].awaitingOrderNumber) {
+    console.log(message.content);
+    if (esConsultaDePedido(message.content) && !userStates[channelId].awaitingOrderNumber && !userStates[channelId].awaitingDataPedido) {
         userStates[channelId].awaitingOrderNumber = true;
+        userStates[channelId].awaitingDataPedido = false;
         message.reply("Por favor, envíame el número de tu pedido.");
+        return;
+    }
+    else if (esRealizarPedido(message.content) && !userStates[channelId].awaitingOrderNumber && !userStates[channelId].awaitingDataPedido){
+        userStates[channelId].awaitingOrderNumber = false;
+        userStates[channelId].awaitingDataPedido = true;
+        message.reply("Escribe que quieres ordenar en el siguiente orden y separado por punto y coma (;): Nombre del producto, cantidad, direccion de envio");
         return;
     }
 
@@ -104,12 +242,53 @@ client.on('messageCreate', async message => {
             } else {
                 reply = `Lo siento, no pude encontrar información sobre el pedido número ${orderNumber}.`;
             }
+            userStates[channelId] = { awaitingOrderNumber: false, awaitingDataPedido: false };
             message.reply(reply);
         } catch (error) {
             console.error('Error al consultar la base de datos:', error);
             message.reply('Hubo un error al procesar tu solicitud.');
         }
         return;
+    }
+
+    else if (userStates[channelId].awaitingDataPedido){
+        try{const detallesPedido = message.content
+            var especificaciones = detallesPedido.split("; ");
+            const nombre_producto = especificaciones[0];
+            const direccion = especificaciones[2];
+            const cantidad = parseInt(especificaciones[1], 10);
+            // [ 'Pelota de perro', 5, 'Ciudad A Calle B' ]
+            const disponibilidad = await getDisponibilityProduct(nombre_producto)
+            
+            if (disponibilidad === null){
+                reply = `Lo siento, pero creo que el producto que quieres no existe en nuestra tienda o no seguiste el formato solicitado`
+                userStates[channelId].awaitingOrderNumber = false;
+                userStates[channelId].awaitingDataPedido = true;
+            }
+            else if (disponibilidad.Disponibilidad === 1){
+                console.log(disponibilidad.Pk_Id)
+                await RealizarPedido()
+                await RealizarEnvio(direccion)
+                await RealizarDetalles(disponibilidad.Pk_Id, cantidad)
+                reply = `Este es el resumen de tu pedido
+                         Articulo: ${nombre_producto}
+                         Cantidad: ${cantidad}
+                         Dirección: ${direccion}
+                         Vuelve Pronto :)`;
+            }
+            else if (disponibilidad.Disponibilidad === 0){
+                reply = `Lo siento, el producto ${nombre_producto} no se encuentra disponible actualmente`
+            } 
+
+            message.reply(reply);
+            userStates[channelId] = { awaitingOrderNumber: false, awaitingDataPedido: false };
+        }
+        catch (error){
+            console.error('Error al consultar la base de datos:', error);
+            message.reply('Hubo un error al procesar tu solicitud.');
+        }
+        return;
+        
     }
 
     const discordThreadId = message.channel.id;
