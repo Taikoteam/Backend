@@ -172,13 +172,14 @@ async function ObtenerUltimoPedido() {
 async function RealizarDetalles(Id, cantidad){
     const Pedido_id = await ObtenerUltimoPedido()
     const Envio_id = await ObtenerUltimoEnvio()
+    const estatus = 'En ruta'
     console.log(`Realizando un nuevo detallesPedido para el cliente`);
     return new Promise((resolve, reject) => {
         console.log("Estoy haciendo un nuevo query");
 
         connection.query(
         'INSERT INTO Detalles_Pedido (Producto_Id, Pedido_Id, Cantidades, Envio_Id) VALUES (?, ?, ?, ?);',
-        [Id, Pedido_id.Id, cantidad, Envio_id.Id],
+        [Id, Pedido_id.Id, cantidad, Envio_id.Id, estatus],
         (error, results, fields) => {
             if (error) {
                 console.error('Error en la consulta a la base de datos:', error);
