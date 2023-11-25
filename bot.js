@@ -131,6 +131,25 @@ async function RealizarEnvio(Direccion){
   });
 }
 
+async function ObtenerIdPedido(){
+    return new Promise((resolve, reject) => {
+        console.log("Estoy haciendo un nuevo query");
+    
+        connection.query(
+          'SELECT Pedido_Id FROM Detalles_Pedido ORDER BY Pedido_Id DESC LIMIT 1;',
+          (error, results, fields) => {
+            if (error) {
+              console.error('Error en la consulta a la base de datos:', error);
+              reject(error);
+            } else {
+              console.log('Último pedido obtenido con éxito:', results[0]);
+              resolve(results.length > 0 ? results[0] : null);
+            }
+          }
+        );
+      });
+}
+
 async function ObtenerUltimoPedido() {
     return new Promise((resolve, reject) => {
       console.log("Estoy haciendo un nuevo query");
@@ -198,7 +217,7 @@ function esConsultaDePedido(mensaje) {
 }
 
 function esRealizarPedido(mensaje){
-    return mensaje.toLowerCase().startsWith("quiero obtener una orden nueva");
+    return mensaje.toLowerCase().startsWith("quiero hacer un pedido");
 }
 
 function extraerNumeroDePedido(mensaje) {
@@ -271,11 +290,13 @@ client.on('messageCreate', async message => {
                 await RealizarPedido()
                 await RealizarEnvio(direccion)
                 await RealizarDetalles(disponibilidad.Pk_Id, cantidad)
+                const id_Pedido = await ObtenerIdPedido()
                 reply = `Este es el resumen de tu pedido
-                         Articulo: ${nombre_producto}
-                         Cantidad: ${cantidad}
-                         Dirección: ${direccion}
-                         Vuelve Pronto :)`;
+                        Articulo: ${nombre_producto}
+                        Cantidad: ${cantidad}
+                        Dirección: ${direccion}
+                        El número de pedido es: ${id_Pedido.Pedido_Id} este lo puedes usar para revisar el estatus posteriormente
+                        Vuelve Pronto :)`;
             }
             else if (disponibilidad.Disponibilidad === 0){
                 reply = `Lo siento, el producto ${nombre_producto} no se encuentra disponible actualmente`
