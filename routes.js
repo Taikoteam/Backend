@@ -24,7 +24,7 @@ router.get('/productos', (req, res) => {
 });
 
 router.get('/pruebaOpenAI', (req, res) => {
-  openai()
+openai()
 });
 
 const storage = multer.diskStorage({
@@ -74,20 +74,27 @@ router.post('/obtenerArchivo', upload.single('file'), (req, res) => {
         pythonData += data; // Almacenar los datos en la variable
     });
 
-    pythonProcess.stderr.on('data', (data) => {
-        console.error(`Error en el script de Python: ${data}`);
-        res.status(500).send('Error en el script de Python.');
-    });
+    let responseSent = false;
 
-    pythonProcess.on('close', (code) => {
-        // El script de Python ha terminado
-        if (code === 0) {
-            // El script terminó sin errores, ahora puedes enviar la respuesta exitosa
-            res.send(pythonData); // Envía los resultados como respuesta
-        } else {
-            // El script terminó con errores, ya se manejó el error anteriormente
+    pythonProcess.stderr.on('data', (data) => {
+        if (!responseSent) {
+            console.error(`Error en el script de Python: ${data}`);
+            res.status(500).send('Error en el script de Python.');
+            responseSent = true;
         }
     });
+    
+    pythonProcess.on('close', (code) => {
+        if (!responseSent) {
+            if (code === 0) {
+                res.send(pythonData);
+            } else {
+                res.status(500).send('Error en el script de Python.');
+            }
+            responseSent = true;
+        }
+    });
+    
 });
 
 module.exports = router;
