@@ -243,7 +243,7 @@ async function handleSms(req, res) {
     const incomingMsg = req.body.Body;
     const senderId = req.body.From;
     messagesLoaded = false; // Inicializa messagesLoaded aqui
-     const channelId = req.body.WaId; // Identificador único del canal o usuario
+    const channelId = req.body.WaId; // Identificador único del canal o usuario
     if (!userStates[channelId]) {
         userStates[channelId] = { awaitingOrderNumber: false, awaitingDataPedido: false };
     }
@@ -329,7 +329,21 @@ async function handleSms(req, res) {
         addThreadToMap(senderId, openAiThreadId);
     }
 
-    await addMessage(openAiThreadId, incomingMsg);
+    const twilioThreadId = req.body.From;
+    if (!openAiThreadId) {
+        // Crea un nuevo hilo en OpenAI
+        const thread = await openai.beta.threads.create();
+        openAiThreadId = thread.id;
+        addThreadToMap(twilioThreadId, openAiThreadId);
+    }
+
+    // Obtén el contenido del mensaje de WhatsApp
+    const twilioMessageContent = req.body.Body;
+
+    // Asegúrate de que el contenido del mensaje no esté vacío
+    if (twilioMessageContent.trim() !== '') {
+        await addMessage(openAiThreadId, twilioMessageContent);
+    }
 
     console.log(`Creating run for thread: ${openAiThreadId}`);
     const run = await openai.beta.threads.runs.create(openAiThreadId, { assistant_id: process.env.ASSISTANT_ID });
@@ -338,6 +352,7 @@ async function handleSms(req, res) {
     const messages = await openai.beta.threads.messages.list(openAiThreadId);
     let response = messages.data[0].content[0].text.value;
     response = response.substring(0, 1600); // Limit for SMS length
+    return sendReply(openAiThreadId, response);
 }
 
 module.exports = { handleSms };
