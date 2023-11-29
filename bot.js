@@ -106,7 +106,7 @@ client.on('messageCreate', async message => {
             // const buffer = Buffer.from(response.data);
     
             // Almacena el archivo temporalmente como PDF
-            const tempDir = path.join(__dirname, 'temp');
+            /*const tempDir = path.join(__dirname, 'temp');
             if (!fs.existsSync(tempDir)) {
                 fs.mkdirSync(tempDir);
             }
@@ -136,7 +136,7 @@ client.on('messageCreate', async message => {
                 headers: {
                     ...formData.getHeaders(),
                 },
-            });
+            });*/
     
             // Puedes manejar la respuesta del endpoint según tus necesidades
             const endpointResult = endpointResponse.data;

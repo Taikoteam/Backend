@@ -45,7 +45,7 @@ object_location = oci.ai_document.models.ObjectLocation()
 object_location.namespace_name = "axyzzksibayy"
 object_location.bucket_name = "bucket-20231101-1735"
 object_location.object_name = (
-    "consttConstanciaFiscalOECG.pdf"  # e.g "key_value_extraction_demo.jpg
+    "a.pdf"  # e.g "key_value_extraction_demo.jpg
 )
 
 print("Creando cliente de AIServiceDocument...")
