@@ -13,7 +13,6 @@ const service = require('./service');
 service(app, connection);
 
 // Middlewares
-app.use(cors());
 app.use(express.urlencoded({ extended: false }));
 
 // Rutas
