@@ -12,10 +12,8 @@ def create_processor_job_callback(times_called, response):
 if len(sys.argv) > 1:
     file_path = sys.argv[1]
     print(f"Ruta del archivo recibida: {file_path}")
-    if not os.path.exists(file_path):
-        print(f"Archivo no encontrado: {file_path}")
-        sys.exit(1)
     print(f"Procesando archivo: {file_path}")
+    #print(f"Procesando archivo: {file_path}")
 else:
     print("No se proporcionó la ruta del archivo")
     sys.exit(1)
@@ -29,6 +27,22 @@ config = {
     "tenancy": "ocid1.tenancy.oc1..aaaaaaaauwv2nodivily5oo5vwrcnc3wkwhvlng24bluxr5chykix7htiloa",
     "region": "us-phoenix-1",
 }
+
+
+# # Verificar si se proporcionó el nombre del archivo
+# if len(sys.argv) < 2:
+#     print("Error: No se proporcionó el nombre del archivo.")
+#     sys.exit(1)
+
+# file_name = sys.argv[1]  # El nombre del archivo se pasa como el segundo argumento
+
+# Verificar si se proporcionó el nombre del archivo
+if len(sys.argv) < 2:
+    print("Error: No se proporcionó el nombre del archivo.")
+    sys.exit(1)
+    
+file_name = sys.argv[1]  # El nombre del archivo se pasa como el segundo argumento
+
 
 print("Configuración OCI:", config)
 if not os.path.exists(config["key_file"]):
@@ -44,9 +58,10 @@ def create_processor_job_callback(times_called, response):
 object_location = oci.ai_document.models.ObjectLocation()
 object_location.namespace_name = "axyzzksibayy"
 object_location.bucket_name = "bucket-20231101-1735"
-object_location.object_name = (
-    "a.pdf"  # e.g "key_value_extraction_demo.jpg
-)
+'''object_location.object_name = (
+    "documentoPrueba.pdf"  # e.g "key_value_extraction_demo.jpg
+)'''
+object_location.object_name = file_name
 
 print("Creando cliente de AIServiceDocument...")
 aiservicedocument_client = oci.ai_document.AIServiceDocumentClientCompositeOperations(
@@ -69,7 +84,7 @@ key_value_extraction_feature = oci.ai_document.models.DocumentKeyValueExtraction
 output_location = oci.ai_document.models.OutputLocation()
 output_location.namespace_name = "axyzzksibayy"
 output_location.bucket_name = "bucket-20231101-1735"
-output_location.prefix = "constt"
+output_location.prefix = "esquizo"
 
 print("Creando trabajo del procesador...")
 # Creación del trabajo del procesador
@@ -103,7 +118,8 @@ try:
     print("Respuesta del procesador:", create_processor_response)
     print("Trabajo del procesador creado.")
 except Exception as e:
-    print(f"Error al crear el trabajo del procesador: {str(e)}")
+    #print(f"Error al crear el trabajo del procesador: {str(e)}")
+    print(f"Error al procesar el archivo: {str(e)}")
     traceback.print_exc()
     sys.exit(1)
 
