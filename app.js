@@ -13,8 +13,7 @@ const service = require('./service');
 service(app, connection);
 
 // Middlewares
-app.use(cors());
-app.use(express.urlencoded({ extended: false })); // Asegúrate de usar urlencoded para parsear los cuerpos de peticiones POST
+app.use(express.urlencoded({ extended: false }));
 
 // Rutas
 const database = require('./routes');
