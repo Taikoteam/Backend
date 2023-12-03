@@ -1,9 +1,18 @@
+/**
+ * Módulo que maneja las funciones relacionadas con la interacción a través de mensajes SMS.
+ * @module bot_twilio
+ */
 const express = require('express');
 const { urlencoded } = require('body-parser');
 const { OpenAI } = require("openai");
 const twilio = require('twilio');
 require("dotenv").config();
 
+/**
+ * Instancia de OpenAI para la integración con el modelo de lenguaje.
+ * @type {OpenAI}
+ * @see {@link https://beta.openai.com/docs/}
+ */
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
@@ -11,46 +20,78 @@ const openai = new OpenAI({
 const app = express();
 app.use(urlencoded({ extended: false }));
 
-// Asumiendo que connection es una instancia de la base de datos MySQL configurada correctamente
 const connection = require('./providers/server');
 
+/**
+ * Mapa que asocia los identificadores de los usuarios de WhatsApp con los hilos de OpenAI.
+ * @type {Object.<string, string>}
+ */
 const threadMap = {};
+
+/**
+ * Obtiene el ID del hilo de OpenAI asociado a un usuario de WhatsApp.
+ * @param {string} senderId - ID del remitente en WhatsApp.
+ * @returns {string} - ID del hilo de OpenAI asociado al usuario.
+ */
 const getOpenAiThreadId = (senderId) => threadMap[senderId];
+
+/**
+ * Asocia un ID de hilo de OpenAI a un usuario de WhatsApp.
+ * @param {string} senderId - ID del remitente en WhatsApp.
+ * @param {string} openAiThreadId - ID del hilo de OpenAI asociado al usuario.
+ */
 const addThreadToMap = (senderId, openAiThreadId) => {
-    console.log(`Adding thread: ${openAiThreadId} for sender: ${senderId}`);
     threadMap[senderId] = openAiThreadId;
 };
 
+/**
+ * Estados finales de los hilos de OpenAI.
+ * @type {string[]}
+ */
 const terminalStates = ["cancelled", "failed", "completed", "expired"];
 const statusCheckLoop = async (openAiThreadId, runId) => {
-    console.log(`Checking status for thread: ${openAiThreadId}, run: ${runId}`);
     const run = await openai.beta.threads.runs.retrieve(openAiThreadId, runId);
 
     if (terminalStates.indexOf(run.status) < 0) {
         await sleep(1000);
         return statusCheckLoop(openAiThreadId, runId);
     }
-
-    console.log(`Run ${runId} completed with status: ${run.status}`);
     return run.status;
 };
 
+/**
+ * Añade un mensaje al hilo de OpenAI.
+ * @param {string} threadId - ID del hilo de OpenAI.
+ * @param {string} content - Contenido del mensaje.
+ * @returns {Promise<object>} - Objeto de mensaje creado.
+ */
 const addMessage = (threadId, content) => {
-    console.log(`Adding message to thread: ${threadId}`);
     return openai.beta.threads.messages.create(threadId, { role: "user", content });
 };
 
-// Estado de los usuarios o canales
+/**
+ * Estados de los usuarios o canales.
+ * @type {Object.<string, { awaitingOrderNumber: boolean, awaitingDataPedido: boolean }>}
+ */
 const userStates = {};
+
+/**
+ * Función de espera.
+ * @param {number} ms - Milisegundos a esperar.
+ * @returns {Promise<void>} - Promesa de espera.
+ */
 const sleep = (ms) => {
     return new Promise(resolve => setTimeout(resolve, ms));
 };
 
+/**
+ * Obtiene el estatus de un pedido.
+ * @param {string} orderNumber - Número de pedido.
+ * @returns {Promise<object|null>} - Objeto con información del pedido o null si no se encuentra.
+ */
 async function getStatusOfOrder(orderNumber) {
-    console.log(`Consultando el estatus del pedido: ${orderNumber}`);
     return new Promise((resolve, reject) => {
         const clienteId = 1
-        console.log("Si estoy entrando a hacer el query")
         connection.query(
             'SELECT P.Id AS Pedido_ID,DP.Estatus,P.Fecha,PR.Nombre AS Nombre_Producto,DP.Cantidades,E.Direccion AS Direccion_de_Envio FROM Pedido AS P JOIN Detalles_Pedido AS DP ON P.Id = DP.Pedido_Id JOIN Producto AS PR ON DP.Producto_Id = PR.Pk_Id JOIN Envio AS E ON DP.Envio_Id = E.Id WHERE P.Id = ? AND P.Cliente_Id = ?;',
             [orderNumber, clienteId],
@@ -58,8 +99,8 @@ async function getStatusOfOrder(orderNumber) {
                 if (error) {
                     console.error('Error en la consulta a la base de datos:', error);
                     reject(error);
-                } else {
-                    console.log('Resultados de la consulta:', results[0]);
+                }
+                else {
                     resolve(results.length > 0 ? results[0] : null);
                 }
             }
@@ -67,18 +108,21 @@ async function getStatusOfOrder(orderNumber) {
     });
 }
 
+/**
+ * Obtiene la disponibilidad de un producto.
+ * @param {string} nombre_producto - Nombre del producto.
+ * @returns {Promise<object|null>} - Objeto con información del producto o null si no se encuentra.
+ */
 async function getDisponibilityProduct(nombre_producto){
-    console.log(`Consultando la disponibilidad del producto: ${nombre_producto}`);
     return new Promise((resolve, reject) => {
-        console.log("Estoy haciendo un nuevo query")
         connection.query('SELECT P.Pk_Id, P.Disponibilidad FROM Producto AS P WHERE P.Nombre = ?;',
         [nombre_producto],
         (error, results, fields) => {
             if (error) {
                 console.error('Error en la consulta a la base de datos:', error);
                 reject(error);
-            } else {
-                console.log('Resultados de la consulta:', results[0]);
+            }
+            else {
                 resolve(results.length > 0 ? results[0] : null);
             }
         }
@@ -86,12 +130,14 @@ async function getDisponibilityProduct(nombre_producto){
     })
 }
 
+/**
+ * Realiza un nuevo pedido.
+ * @returns {Promise<object>} - Objeto con información del pedido realizado.
+ */
 async function RealizarPedido(){
     const Cliente_Id = 1;
     const Fecha = '2023-11-22';
-    console.log(`Realizando un nuevo pedido para el cliente`);
     return new Promise((resolve, reject) => {
-        console.log("Estoy haciendo un nuevo query");
         connection.query(
         'INSERT INTO Pedido (Cliente_Id, Fecha) VALUES (?, ?);',
         [Cliente_Id, Fecha],
@@ -99,8 +145,8 @@ async function RealizarPedido(){
             if (error) {
                 console.error('Error en la consulta a la base de datos:', error);
                 reject(error);
-            } else {
-                console.log('Pedido realizado con éxito. ID del pedido:', results.insertId);
+            }
+            else {
                 resolve(results);
         }
     }
@@ -108,14 +154,16 @@ async function RealizarPedido(){
 });
 }
 
+/**
+ * Realiza un nuevo envío.
+ * @param {string} Direccion - Dirección del envío.
+ * @returns {Promise<object>} - Objeto con información del envío realizado.
+ */
 async function RealizarEnvio(Direccion){
     const Id_Tipo_Envio = Math.floor(Math.random() * 3) + 1;
     const Id_tipo_contenedor = Math.floor(Math.random() * 7) + 1;
     const Fecha = '2023-11-23'
-    console.log(`Realizando un nuevo envio para el cliente`);
     return new Promise((resolve, reject) => {
-        console.log("Estoy haciendo un nuevo query");
-
         connection.query(
         'INSERT INTO Envio (Id_Tipo_Envio, Id_tipo_contenedor, Direccion, Fecha_Envio) VALUES (?, ?, ?, ?);',
         [Id_Tipo_Envio, Id_tipo_contenedor, Direccion, Fecha],
@@ -123,8 +171,8 @@ async function RealizarEnvio(Direccion){
             if (error) {
                 console.error('Error en la consulta a la base de datos:', error);
                 reject(error);
-            } else {
-                console.log('Pedido realizado con éxito. ID del pedido:', results.insertId);
+            }
+            else {
                 resolve(results);
         }
     }
@@ -132,18 +180,20 @@ async function RealizarEnvio(Direccion){
 });
 }
 
+/**
+ * Obtiene el ID de un pedido.
+ * @returns {Promise<object|null>} - Objeto con información del pedido o null si no se encuentra.
+ */
 async function ObtenerIdPedido(){
     return new Promise((resolve, reject) => {
-        console.log("Estoy haciendo un nuevo query");
-    
         connection.query(
         'SELECT Pedido_Id FROM Detalles_Pedido ORDER BY Pedido_Id DESC LIMIT 1;',
         (error, results, fields) => {
             if (error) {
             console.error('Error en la consulta a la base de datos:', error);
             reject(error);
-            } else {
-            console.log('Último pedido obtenido con éxito:', results[0]);
+            }
+            else {
             resolve(results.length > 0 ? results[0] : null);
             }
         }
@@ -151,17 +201,20 @@ async function ObtenerIdPedido(){
     });
 }
 
+/**
+ * Obtiene el último pedido.
+ * @returns {Promise<object|null>} - Objeto con información del último pedido o null si no se encuentra.
+ */
 async function ObtenerUltimoPedido() {
     return new Promise((resolve, reject) => {
-    console.log("Estoy haciendo un nuevo query");
     connection.query(
         'SELECT Id FROM Pedido ORDER BY Id DESC LIMIT 1;',
         (error, results, fields) => {
         if (error) {
             console.error('Error en la consulta a la base de datos:', error);
             reject(error);
-        } else {
-            console.log('Último pedido obtenido con éxito:', results[0]);
+        }
+        else {
             resolve(results.length > 0 ? results[0] : null);
         }
         }
@@ -169,9 +222,12 @@ async function ObtenerUltimoPedido() {
     });
 }
 
+/**
+ * Obtiene el último envío.
+ * @returns {Promise<object|null>} - Objeto con información del último envío o null si no se encuentra.
+ */
 async function ObtenerUltimoEnvio() {
     return new Promise((resolve, reject) => {
-    console.log("Estoy haciendo un nuevo query");
     connection.query(
         'SELECT Id FROM Envio ORDER BY Id DESC LIMIT 1;',
         (error, results, fields) => {
@@ -180,7 +236,6 @@ async function ObtenerUltimoEnvio() {
             reject(error);
         }
         else {
-            console.log('Último pedido obtenido con éxito:', results[0]);
             resolve(results.length > 0 ? results[0] : null);
         }
         }
@@ -188,14 +243,17 @@ async function ObtenerUltimoEnvio() {
     });
 }
 
+/**
+ * Realiza los detalles de un pedido.
+ * @param {number} Id - ID del producto.
+ * @param {number} cantidad - Cantidad del producto.
+ * @returns {Promise<object>} - Objeto con información del detalle del pedido.
+ */
 async function RealizarDetalles(Id, cantidad){
     const Pedido_id = await ObtenerUltimoPedido()
     const Envio_id = await ObtenerUltimoEnvio()
     const estatus = 'En ruta'
-    console.log(`Realizando un nuevo detallesPedido para el cliente`);
     return new Promise((resolve, reject) => {
-        console.log("Estoy haciendo un nuevo query");
-
         connection.query(
         'INSERT INTO Detalles_Pedido (Producto_Id, Pedido_Id, Cantidades, Envio_Id) VALUES (?, ?, ?, ?);',
         [Id, Pedido_id.Id, cantidad, Envio_id.Id, estatus],
@@ -203,31 +261,55 @@ async function RealizarDetalles(Id, cantidad){
             if (error) {
                 console.error('Error en la consulta a la base de datos:', error);
                 reject(error);
-            } else {
-                console.log('Pedido realizado con éxito. ID del pedido:', results.insertId);
+            }
+            else {
                 resolve(results);
         }
-      }
+    }
     );
-  });
+});
 }
 
+/**
+ * Verifica si un mensaje es una consulta de estatus de pedido.
+ * @param {string} mensaje - Contenido del mensaje.
+ * @returns {boolean} - true si el mensaje es una consulta de estatus de pedido, false de lo contrario.
+ */
 function esConsultaDePedido(mensaje) {
     return mensaje.toLowerCase().startsWith("estatus del pedido");
 }
 
+/**
+ * Verifica si un mensaje es para realizar un pedido.
+ * @param {string} mensaje - Contenido del mensaje.
+ * @returns {boolean} - true si el mensaje es para realizar un pedido, false de lo contrario.
+ */
 function esRealizarPedido(mensaje){
     return mensaje.toLowerCase().startsWith("quiero hacer un pedido");
 }
 
+/**
+ * Extrae el número de pedido de un mensaje.
+ * @param {string} mensaje - Contenido del mensaje.
+ * @returns {string|null} - Número de pedido o null si no se encuentra.
+ */
 function extraerNumeroDePedido(mensaje) {
     const partes = mensaje.split(" ");
     const numeroPedido = partes.length > 3 ? partes[3] : null;
-    console.log(`extraerNumeroDePedido: ${numeroPedido}`);
     return numeroPedido;
 }
 
+/**
+ * Cliente de Twilio para enviar mensajes de respuesta.
+ * @type {object}
+ */
 const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
+/**
+ * Envia una respuesta a través de Twilio.
+ * @param {string} senderId - ID del remitente en WhatsApp.
+ * @param {string} replyText - Texto de la respuesta.
+ */
 const sendReply = (senderId, replyText) => {
     twilioClient.messages.create({
         body: replyText,
@@ -238,8 +320,13 @@ const sendReply = (senderId, replyText) => {
     .catch(error => console.error(`Error sending message: ${error}`));
 };
 
+/**
+ * Maneja el proceso de recepción de mensajes SMS.
+ * @param {object} req - Objeto de solicitud HTTP.
+ * @param {object} res - Objeto de respuesta HTTP.
+ * @returns {Promise<void>} - Promesa que se resuelve después de manejar el mensaje SMS.
+ */
 async function handleSms(req, res) {
-    console.log("Received SMS");
     const incomingMsg = req.body.Body;
     const senderId = req.body.From;
     messagesLoaded = false; // Inicializa messagesLoaded aqui
@@ -247,7 +334,6 @@ async function handleSms(req, res) {
     if (!userStates[channelId]) {
         userStates[channelId] = { awaitingOrderNumber: false, awaitingDataPedido: false };
     }
-    console.log(req.body.Body);
     if (esConsultaDePedido(req.body.Body) && !userStates[channelId].awaitingOrderNumber && !userStates[channelId].awaitingDataPedido) {
         userStates[channelId].awaitingOrderNumber = true;
         userStates[channelId].awaitingDataPedido = false;
@@ -265,7 +351,6 @@ async function handleSms(req, res) {
          userStates[channelId].awaitingOrderNumber = false; // Resetear el estado
         try {
             const status = await getStatusOfOrder(orderNumber);
-            console.log(status)
             let reply;
             if (status) {
                 reply = `El estatus de la orden ${orderNumber} de ${status.Cantidades} pz de ${status.Nombre_Producto}, enviado a ${status.Direccion_de_Envio} es: ${status.Estatus}`;
@@ -288,7 +373,6 @@ async function handleSms(req, res) {
             const nombre_producto = especificaciones[0];
             const direccion = especificaciones[2];
             const cantidad = parseInt(especificaciones[1], 10);
-            // [ 'Pelota de perro', 5, 'Ciudad A Calle B' ]
             const disponibilidad = await getDisponibilityProduct(nombre_producto)
             if (disponibilidad === null){
                 reply = `Lo siento, pero creo que el producto que quieres no existe en nuestra tienda o no seguiste el formato solicitado`
@@ -296,7 +380,6 @@ async function handleSms(req, res) {
                 userStates[channelId].awaitingDataPedido = true;
             }
             else if (disponibilidad.Disponibilidad === 1){
-                console.log(disponibilidad.Pk_Id)
                 await RealizarPedido()
                 await RealizarEnvio(direccion)
                 await RealizarDetalles(disponibilidad.Pk_Id, cantidad)
@@ -323,7 +406,6 @@ async function handleSms(req, res) {
     let openAiThreadId = getOpenAiThreadId(senderId);
 
     if (!openAiThreadId) {
-        console.log(`Creating new thread for sender: ${senderId}`);
         const thread = await openai.beta.threads.create();
         openAiThreadId = thread.id;
         addThreadToMap(senderId, openAiThreadId);
@@ -344,10 +426,7 @@ async function handleSms(req, res) {
     if (twilioMessageContent.trim() !== '') {
         await addMessage(openAiThreadId, twilioMessageContent);
     }
-
-    console.log(`Creating run for thread: ${openAiThreadId}`);
     const run = await openai.beta.threads.runs.create(openAiThreadId, { assistant_id: process.env.ASSISTANT_ID });
-
     const status = await statusCheckLoop(openAiThreadId, run.id);
     const messages = await openai.beta.threads.messages.list(openAiThreadId);
     let response = messages.data[0].content[0].text.value;

@@ -4,9 +4,23 @@ const connection = require('./providers/server');
 const openai = require('./openai');
 const { handleSms } = require('./bot_twilio');
 
+/**
+ * Ruta para obtener información sobre productos.
+ * @name GET /productos
+ * @function
+ * @memberof module:rutas
+ * @inner
+ * @param {Object} req - Objeto de solicitud HTTP.
+ * @param {Object} res - Objeto de respuesta HTTP.
+ * @returns {void}
+ */
 router.get('/productos', (req, res) => {
+    /**
+     * Consulta SQL para obtener información básica sobre productos.
+     * @type {string}
+     */
     const sql = 'SELECT Nombre, Precio_Lista, Marca FROM Producto LIMIT 30';
-    
+
     connection.query(sql, (error, result) => {
         if (error) {
             console.error('Error al recuperar datos de la base de datos: ' + error.message);
@@ -21,10 +35,34 @@ router.get('/productos', (req, res) => {
     });
 });
 
-router.get('/pruebaOpenAI', (req, res) => {
-  openai()
+/**
+ * Ruta para realizar una prueba con OpenAI.
+ * @name POST /pruebaOpenAI
+ * @function
+ * @memberof module:rutas
+ * @inner
+ * @param {Object} req - Objeto de solicitud HTTP.
+ * @param {Object} res - Objeto de respuesta HTTP.
+ * @returns {void}
+ */
+router.post('/pruebaOpenAI', (req, res) => {
+    openai();
 });
 
+/**
+ * Ruta para manejar mensajes SMS.
+ * @name POST /sms
+ * @function
+ * @memberof module:rutas
+ * @inner
+ * @param {Object} req - Objeto de solicitud HTTP que contiene el mensaje SMS.
+ * @param {Object} res - Objeto de respuesta HTTP.
+ * @returns {void}
+ */
 router.post('/sms', handleSms);
 
+/**
+ * Módulo que proporciona rutas para la aplicación.
+ * @module rutas
+ */
 module.exports = router;
