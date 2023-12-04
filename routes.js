@@ -36,20 +36,6 @@ router.get('/productos', (req, res) => {
 });
 
 /**
- * Ruta para realizar una prueba con OpenAI.
- * @name POST /pruebaOpenAI
- * @function
- * @memberof module:rutas
- * @inner
- * @param {Object} req - Objeto de solicitud HTTP.
- * @param {Object} res - Objeto de respuesta HTTP.
- * @returns {void}
- */
-router.post('/pruebaOpenAI', (req, res) => {
-    openai();
-});
-
-/**
  * Ruta para manejar mensajes SMS.
  * @name POST /sms
  * @function
